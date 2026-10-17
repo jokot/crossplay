@@ -457,6 +457,14 @@ void rememberForWake(const char* currentActivityName) {
   }
 }
 
+bool reopenAfterRestart(const char* title) {
+  int folder = -1;
+  int item = -1;
+  if (title == nullptr || !findItemByTitle(title, folder, item)) return false;
+  setOpenTitle(kFolders[folder].items[item].title);
+  return true;
+}
+
 bool resumeFromWake(GfxRenderer& renderer, MappedInputManager& mappedInput) {
   ensureLoaded();
   if (state.openTitle[0] == '\0') return false;

@@ -119,6 +119,19 @@ std::unique_ptr<Activity> WikipediaActivity::createForTitle(GfxRenderer& rendere
   return activity;
 }
 
+// The install screen hands the card to USB, which must never happen under an
+// open book. So from the reader, getting Wikipedia is a restart into the app:
+// the book's place is already saved (the reader saves on every page), the shelf
+// is told Wikipedia is open, and the reboot lands on its install screen with
+// nothing beneath it -- and with a fresh heap for the copy.
+void WikipediaActivity::getFromReader() {
+  if (!shelf::reopenAfterRestart("WIKIPEDIA")) {
+    LOG_ERR(kTag, "no shelf item to restart into");
+    return;
+  }
+  restartToAppAfterStorageHandoff();
+}
+
 void WikipediaActivity::leaveApp() {
   if (returnToCaller_) {
     finish();
@@ -176,7 +189,9 @@ void WikipediaActivity::onEnter() {
     }
   } else if (returnToCaller_) {
     // Never the install screen over an open book: it hands the card to USB.
-    showNotice("NOTHING YET", tr(STR_WIKI_NOT_ON_CARD), "BACK", wikiui::ActionBack);
+    // GET WIKIPEDIA reaches it through a restart instead (getFromReader).
+    noticeOffersInstall_ = true;
+    showNotice("NOTHING YET", tr(STR_WIKI_NOT_ON_CARD), tr(STR_WIKI_GET), wikiui::ActionInstall);
   } else {
     enterInstall();
   }
@@ -779,6 +794,10 @@ void WikipediaActivity::routeAction(const int action, const int value) {
       }
       return;
     case wikiui::ActionInstall:
+      if (returnToCaller_) {
+        getFromReader();
+        return;
+      }
       enterInstall();
       return;
     case wikiui::ActionContents:
@@ -1179,6 +1198,10 @@ void WikipediaActivity::render(RenderLock&&) {
       model.body = noticeBody_.c_str();
       model.actionLabel = noticeAction_;
       model.action = noticeActionId_;
+      if (noticeOffersInstall_) {
+        model.secondaryLabel = "BACK";
+        model.secondaryAction = wikiui::ActionBack;
+      }
       wikiui::buildNotice(screen, model);
       break;
     }
