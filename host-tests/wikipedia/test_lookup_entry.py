@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """Wikipedia opened from the reader's selection bar comes back to the book.
 
-The selection bar's Wikipedia button starts WikipediaActivity on top of the
-open book (wikipedia_lookup::open). Three things must hold, and none of them
-can be exercised on the host, so this reads the source the way
-test_usb_exclusive.py does:
+The selection bar's Wiki button starts WikipediaActivity on top of the open
+book (wikipedia_lookup::open). These must hold, and none of them can be
+exercised on the host, so this reads the source the way test_usb_exclusive.py
+does:
 
-1. The button exists only when a pack is on the card. ClipSelectionActivity
-   adds ClippingResult::Action::Wikipedia only behind
-   wikipedia_lookup::available(), which asks for the pack manifest.
+1. The bar always offers Wiki, and opens the app through wikipedia_lookup.
 2. Every way out of the app returns to the book. On the shelf the app leaves
    through shelf::leave(); opened from the reader it must finish() instead, or
    Back drops the reader on the Apps folder with the book closed.
-3. With no pack the app never hands the card to USB. The install screen calls
-   Storage.beginUsbDrive(); doing that over an open book detaches the card the
-   reader is reading from.
+3. With no pack the app never hands the card to USB under the book. The
+   install screen calls Storage.beginUsbDrive(); doing that over an open book
+   detaches the card the reader is reading from. Instead the no-pack notice
+   offers GET WIKIPEDIA, which records the app on the shelf and restarts into
+   it, so the install screen opens with nothing beneath it.
 """
 
 import pathlib
@@ -54,15 +54,11 @@ lookup = (WIKI / "WikipediaLookup.cpp").read_text(encoding="utf-8") if (WIKI / "
 activity = (WIKI / "WikipediaActivity.cpp").read_text(encoding="utf-8")
 clip = CLIP.read_text(encoding="utf-8")
 
-# 1. Only with a pack.
-check("Pack::kManifestPath" in body_of(lookup, "bool available()"),
-      "wikipedia_lookup::available() must ask for the pack manifest")
+# 1. Always offered, through wikipedia_lookup.
 check("createForTitle(" in body_of(lookup, "std::unique_ptr<Activity> open("),
       "wikipedia_lookup::open() must start the app on the selected title")
-adds = [m.start() for m in re.finditer(r"ClippingResult::Action::Wikipedia", clip)]
-check(len(adds) >= 1, "ClipSelectionActivity never offers the Wikipedia action")
-guarded = re.search(r"if\s*\(\s*wikipedia_lookup::available\(\)\s*\)[^;]*Action::Wikipedia", clip)
-check(guarded is not None, "the Wikipedia action must be added only behind wikipedia_lookup::available()")
+check(re.search(r"addAction\(\s*ClippingResult::Action::Wikipedia", clip) is not None,
+      "ClipSelectionActivity never offers the Wiki action")
 
 # 2. Every exit goes back to the book.
 leaves = [m.start() for m in re.finditer(r"shelf::leave\(", activity)]
@@ -79,6 +75,15 @@ install_call = on_enter.find("enterInstall()")
 check(install_call < 0 or "returnToCaller_" in on_enter[:install_call],
       "onEnter() must not reach enterInstall() when opened from the reader")
 check("pendingTitle_" in on_enter, "onEnter() must open the title it was started with")
+get = body_of(activity, "void WikipediaActivity::getFromReader()")
+check("reopenAfterRestart(" in get and "restartToAppAfterStorageHandoff()" in get,
+      "GET WIKIPEDIA from the reader must record the app on the shelf and restart into it")
+check("beginUsbDrive" not in get and "enterInstall" not in get,
+      "GET WIKIPEDIA from the reader must never reach the install screen in place")
+install = activity[activity.find("case wikiui::ActionInstall:"):]
+install = install[: install.find("return;", install.find("enterInstall();")) + 7]
+check(install.find("getFromReader()") >= 0 and install.find("returnToCaller_") < install.find("enterInstall()"),
+      "the install action must restart from the reader before it can reach enterInstall()")
 
 for b in bad:
     print(f"FAIL lookup-entry  {b}")

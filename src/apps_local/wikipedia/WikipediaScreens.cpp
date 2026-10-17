@@ -546,6 +546,10 @@ void buildNotice(toybox::Screen& screen, const NoticeModel& model) {
     const fui::Rect box{static_cast<int16_t>(body.x + kMargin), static_cast<int16_t>(body.bottom() - 80), inner, 56};
     drawAction(screen, box, model.actionLabel, model.action, true);
   }
+  if (model.secondaryLabel) {
+    const fui::Rect box{static_cast<int16_t>(body.x + kMargin), static_cast<int16_t>(body.bottom() - 148), inner, 56};
+    drawAction(screen, box, model.secondaryLabel, model.secondaryAction, false);
+  }
 }
 
 }  // namespace wikiui

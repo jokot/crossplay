@@ -16,7 +16,6 @@
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityResult.h"
-#include "apps_local/wikipedia/WikipediaLookup.h"
 #include "clippings/ClippingText.h"
 #include "clippings/SelectionGeometry.h"
 #include "components/UIScale.h"
@@ -64,7 +63,7 @@ void ClipSelectionActivity::onEnter() {
     barLabels[barCount++] = label;
   };
   addAction(ClippingResult::Action::Lookup, tr(STR_LOOKUP));
-  if (wikipedia_lookup::available()) addAction(ClippingResult::Action::Wikipedia, tr(STR_WIKI_BUTTON));
+  addAction(ClippingResult::Action::Wikipedia, tr(STR_WIKI_BUTTON));
   addAction(ClippingResult::Action::Clip, tr(STR_CLIP));
   addAction(ClippingResult::Action::Bookmark, tr(STR_BOOKMARK_OPTION));
   fontId = SETTINGS.getReaderFontId();
