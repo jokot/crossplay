@@ -12,6 +12,7 @@
 #if defined(FREEINK_NET_WOLFSSL)
 #include <SecureHttpClient.h>
 
+#include "../bridge/SyncHeadroom.h"
 #include "StudySyncRoots.h"
 #include "network/DeviceReport.h"
 #else
@@ -68,14 +69,15 @@ const char* caRoots() {
   return sdRoots.empty() ? kBridgeCaRoots : sdRoots.c_str();
 }
 
-// TLS wants ~35KB free with a 20KB block (the KOSync numbers, measured with
-// the same wolfSSL build). Callers close the deck first; this is the last
-// line of defense, not the plan.
+// Room for a TLS session (synchead: the KOSync floor where every allocation is
+// internal, a PSRAM-aware one where wolfSSL's buffers land in PSRAM). Callers
+// close the deck first; this is the last line of defense, not the plan.
 bool insufficientHeap(std::string& message) {
-  const uint32_t freeHeap = ESP.getFreeHeap();
-  const uint32_t maxBlock = ESP.getMaxAllocHeap();
-  if (freeHeap < 35000 || maxBlock < 20000) {
-    LOG_ERR("STUDYSYNC", "heap too low for TLS: free=%u block=%u", freeHeap, maxBlock);
+  synchead::Heap internal{}, psram{};
+  bool psramUsed = false;
+  if (!synchead::liveHeapAllows(internal, psram, psramUsed)) {
+    LOG_ERR("STUDYSYNC", "heap too low for TLS: free=%u block=%u psram=%u/%u", (unsigned)internal.freeBytes,
+            (unsigned)internal.largestBlock, (unsigned)psram.freeBytes, (unsigned)psram.largestBlock);
     message = "Not enough memory free to sync right now. Leave and reopen Study, then try again.";
     return true;
   }

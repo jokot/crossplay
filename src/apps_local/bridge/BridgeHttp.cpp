@@ -13,6 +13,7 @@
 
 // One bundle for every bridge behind the same tunnel. See BridgeHttp.h.
 #include "../study/StudySyncRoots.h"
+#include "SyncHeadroom.h"
 #include "network/DeviceReport.h"
 #else
 #include <unistd.h>
@@ -70,14 +71,15 @@ void identify(freeink::SecureHttpClient& http, const std::string& url) {
   for (int i = 0; i < n; ++i) http.addHeader(report[i].name, report[i].value);
 }
 
-// TLS wants ~35KB free with a 20KB block (the KOSync numbers, measured with
-// the same wolfSSL build). Callers free what they can first; this is the last
-// line of defense, not the plan.
+// Room for a TLS session (synchead: the KOSync floor where every allocation is
+// internal, a PSRAM-aware one where wolfSSL's buffers land in PSRAM). Callers
+// free what they can first; this is the last line of defense, not the plan.
 bool insufficientHeap(const Endpoint& endpoint, std::string& message) {
-  const uint32_t freeHeap = ESP.getFreeHeap();
-  const uint32_t maxBlock = ESP.getMaxAllocHeap();
-  if (freeHeap < 35000 || maxBlock < 20000) {
-    LOG_ERR(endpoint.tag, "heap too low for TLS: free=%u block=%u", freeHeap, maxBlock);
+  synchead::Heap internal{}, psram{};
+  bool psramUsed = false;
+  if (!synchead::liveHeapAllows(internal, psram, psramUsed)) {
+    LOG_ERR(endpoint.tag, "heap too low for TLS: free=%u block=%u psram=%u/%u", (unsigned)internal.freeBytes,
+            (unsigned)internal.largestBlock, (unsigned)psram.freeBytes, (unsigned)psram.largestBlock);
     message = "Not enough memory free to sync right now. Leave the app and open it again.";
     return true;
   }
