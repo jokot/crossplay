@@ -1358,8 +1358,10 @@ void CrossPointWebServer::handleDelete() const {
     // Security check: prevent deletion of protected items
     const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
 
-    // Hidden/system files and credential stores are protected
-    if (itemName.startsWith(".") || protectedpaths::isSensitivePath(itemPath.c_str())) {
+    // Hidden/system files and credential stores are protected, except the
+    // metadata macOS leaves on the card, which is removed whole.
+    const bool osJunk = protectedpaths::isRemovableOsJunk(itemPath.c_str());
+    if ((itemName.startsWith(".") && !osJunk) || protectedpaths::isSensitivePath(itemPath.c_str())) {
       failedItems += itemPath + " (hidden/system file); ";
       allSuccess = false;
       continue;
@@ -1389,7 +1391,12 @@ void CrossPointWebServer::handleDelete() const {
     // Decide whether it's a directory or file by opening it
     bool success = false;
     HalFile f = Storage.open(itemPath.c_str());
-    if (f && f.isDirectory()) {
+    if (osJunk && f && f.isDirectory()) {
+      // A Spotlight index or Trashes folder is never empty and its contents
+      // are not browsable here, so the empty-folder rule would make it permanent.
+      f.close();
+      success = Storage.removeDir(itemPath.c_str());
+    } else if (f && f.isDirectory()) {
       // For folders, ensure empty before removing
       HalFile entry = f.openNextFile();
       if (entry) {
