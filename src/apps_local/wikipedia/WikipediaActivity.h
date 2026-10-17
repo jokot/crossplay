@@ -117,6 +117,10 @@ class WikipediaActivity final : public Activity {
   // sits on top of an open book rather than the shelf.
   std::string pendingTitle_;
   bool returnToCaller_ = false;
+  // The no-pack notice shown over a book: GET WIKIPEDIA restarts into the app
+  // (getFromReader), and BACK is drawn beside it.
+  bool noticeOffersInstall_ = false;
+  void getFromReader();
   std::string footer_;
   std::string partsLine_;
 

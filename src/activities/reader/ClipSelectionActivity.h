@@ -65,8 +65,8 @@ class ClipSelectionActivity final : public Activity {
   bool handleButtons(uint8_t buttons);
   Rect handleRect(int index, bool start) const;
   Rect actionRect() const;
-  // The touch action bar, decided on entry. FORK CHANGE: Wikipedia joins it
-  // when a pack is on the card (wikipedia_lookup::available()).
+  // The touch action bar, decided on entry. FORK CHANGE: Wiki (the offline
+  // Wikipedia app, apps_local/wikipedia) sits between Look Up and Clip.
   static constexpr int kMaxActions = 4;
   ClippingResult::Action barActions[kMaxActions] = {};
   const char* barLabels[kMaxActions] = {};

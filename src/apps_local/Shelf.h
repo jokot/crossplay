@@ -159,6 +159,12 @@ void rememberForWake(const char* currentActivityName);
 // which is where every wake used to land.
 bool resumeFromWake(GfxRenderer& renderer, MappedInputManager& mappedInput);
 
+// Record the item titled `title` as open, so the next restart with the APP
+// target (restartToAppAfterStorageHandoff) lands in it. For a screen that must
+// reach an app with nothing beneath it -- Wikipedia's install, from a book.
+// False, and nothing recorded, when no item has that title.
+bool reopenAfterRestart(const char* title);
+
 // Open PLAYER, the one screen in the fork that is not a game and not a folder.
 //
 // It is reached from the footer bar rather than from a row, so it is not an
