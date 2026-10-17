@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "TlsHeadroom.h"
+
 /**
  * HTTP client utility for fetching content and downloading files. Built on
  * esp_http_client: https is verified against the CA bundle, plain http is
@@ -31,8 +33,16 @@ class HttpDownloader {
   // its ~17KB record buffer fails mid-stream (wolfSSL MEMORY_E) -- or an
   // interior allocation abort()s the device. Callers should check before
   // downloadToFile() and fail into their error UI instead.
-  static constexpr uint32_t MIN_TLS_FREE_HEAP = 40000;
-  static constexpr uint32_t MIN_TLS_MAX_ALLOC = 20000;
+  static constexpr uint32_t MIN_TLS_FREE_HEAP = tlsheadroom::kInternalFree;
+  static constexpr uint32_t MIN_TLS_MAX_ALLOC = tlsheadroom::kInternalBlock;
+
+  /**
+   * The same pre-flight, measured against the heap the session will actually
+   * use: on a board whose malloc() spills to PSRAM the record buffers live
+   * there, so the internal floor is lower and PSRAM is checked as well.
+   * Logs "Low heap for <what>" under `logTag` when it refuses.
+   */
+  static bool hasTlsHeadroom(const char* logTag, const char* what);
 
   using Header = std::pair<std::string, std::string>;
 

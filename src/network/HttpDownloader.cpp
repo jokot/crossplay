@@ -1,6 +1,7 @@
 #include "HttpDownloader.h"
 
 #include <Arduino.h>
+#include <HalMemory.h>
 #include <Logging.h>
 #include <ResumableFetch.h>
 
@@ -93,6 +94,29 @@ HttpDownloader::DownloadError runGetSecure(const std::string& url, const std::st
 int HttpDownloader::lastStatus() { return g_lastStatus; }
 
 bool HttpDownloader::lastAnswerRedirected() { return g_lastRedirected; }
+
+bool HttpDownloader::hasTlsHeadroom(const char* logTag, const char* what) {
+  const HalMemory::HeapStats internalStats = HalMemory::getInternalHeap();
+  const tlsheadroom::Heap internal{static_cast<uint32_t>(internalStats.freeBytes),
+                                   static_cast<uint32_t>(internalStats.largestBlockBytes)};
+  tlsheadroom::Heap psram{0, 0};
+  bool mallocReachesPsram = false;
+#if CONFIG_SPIRAM_USE_MALLOC
+  const HalMemory::HeapStats psramStats = HalMemory::getPsramHeap();
+  mallocReachesPsram = psramStats.totalBytes > 0;
+  psram = {static_cast<uint32_t>(psramStats.freeBytes), static_cast<uint32_t>(psramStats.largestBlockBytes)};
+#endif
+  if (tlsheadroom::enough(internal, mallocReachesPsram ? &psram : nullptr)) return true;
+  if (mallocReachesPsram) {
+    LOG_ERR(logTag, "Low heap for %s (%u free, %u max block; PSRAM %u free, %u max block)", what,
+            (unsigned)internal.freeBytes, (unsigned)internal.largestBlock, (unsigned)psram.freeBytes,
+            (unsigned)psram.largestBlock);
+  } else {
+    LOG_ERR(logTag, "Low heap for %s (%u free, %u max block)", what, (unsigned)internal.freeBytes,
+            (unsigned)internal.largestBlock);
+  }
+  return false;
+}
 
 bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent, const std::string& username,
                               const std::string& password, const std::vector<Header>& headers) {
