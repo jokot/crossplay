@@ -28,10 +28,12 @@ The Dictionary setting only appears when at least one usable dictionary folder e
 
 ## Looking Up Words and Phrases
 
-Two ways to start a lookup while reading:
+Ways to start a lookup while reading:
 
 - Open the reader menu (**Confirm**) and choose **Look Up**.
-- Or set **Settings → Controls → Long-press Menu** to "Dictionary", then hold **Confirm** (~0.4s) on the reading page.
+- On boards without a Home key: set **Settings → Controls → Long-press Menu** to "Dictionary", then hold **Confirm** (~0.4s) on the reading page.
+- On boards with a Home key (X4 Pro): that setting is not shown. Instead, set any gesture in **Settings → Controls → Home Button Gestures** (Tap, Double Tap or Long Press) to "Dictionary", then use that gesture on the reading page.
+- On touchscreen devices: long-press a word and tap **Look Up** (see below).
 
 ### Selecting Text
 
@@ -61,6 +63,8 @@ On the very first lookup with a dictionary (and again whenever the `.idx` or `.s
 When a word is found, the definition screen shows the matched headword at the top and the definition text below, with a page counter for long definitions.
 
 HTML dictionaries that declare `sametypesequence=h` use the EPUB text-layout engine for semantic formatting such as headings, bold, italics, lists, and line breaks. Images and CSS styling are ignored. Definitions that are too large or cannot be laid out within the available memory fall back to plain text.
+
+Definitions are drawn in your reading font. Pronunciations in Wiktionary-based dictionaries use IPA symbols (`ˈ ː ɹ ɪ ʊ`…), which the built-in reader fonts do not include, so they show as `�`. To see them, install an SD card font that covers IPA, such as Gentium Book Plus or Noto Serif Extended from **Settings → Reader → Manage Fonts**, and select it as the reading font.
 
 - **Left/Right** or side **Up/Down** — previous / next page
 - **Back** — return to word selection
