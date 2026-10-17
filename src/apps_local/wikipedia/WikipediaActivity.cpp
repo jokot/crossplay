@@ -1063,8 +1063,13 @@ void WikipediaActivity::render(RenderLock&&) {
   const int readerSmall =
       SETTINGS.fontFamily == CrossPointSettings::NOTOSANS ? NOTOSANS_12_FONT_ID : NOTOSERIF_12_FONT_ID;
   const bool prose = view_ == View::Article || view_ == View::Contents;
+  // The install screen hands the card to USB and then redraws. The reader's
+  // face may be an SD-card font whose glyphs load from the card on demand, so
+  // there it drew only what was already resident ("helheeaehecehscable."). It
+  // takes the reading cut compiled into the firmware instead.
+  const int bodyFont = view_ == View::Install ? toybox::kReadingFontId : readerFont;
   const toybox::Faces faces = prose ? toybox::Faces{readerSmall, readerFont, readerFont}
-                                    : toybox::Faces{toybox::kButtonFontId, readerFont, toybox::kDisplayFontId};
+                                    : toybox::Faces{toybox::kButtonFontId, bodyFont, toybox::kDisplayFontId};
   fui::GfxRendererTarget target = toybox::makeTarget(renderer, faces);
   const fui::InputSnapshot noInput{};
   toybox::Frame frame(target, target.deviceContext(), noInput, interactions_);
