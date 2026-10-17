@@ -64,6 +64,25 @@ inline bool isSensitivePath(const char* path) {
   return false;
 }
 
+// Metadata macOS writes onto any card it mounts, in the exact spellings it uses.
+inline constexpr const char* OS_JUNK_NAMES[] = {".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems",
+                                                ".DS_Store"};
+
+// The last segment is OS_JUNK_NAMES or an AppleDouble "._name", and no earlier
+// segment is dot-prefixed, so nothing inside the firmware's hidden folders qualifies.
+inline bool isRemovableOsJunk(const char* path) {
+  const char* last = strrchr(path, '/');
+  const char* leaf = last ? last + 1 : path;
+  for (const char* seg = path; seg < leaf; seg++) {
+    if (*seg == '.' && (seg == path || seg[-1] == '/')) return false;
+  }
+  if (leaf[0] == '.' && leaf[1] == '_' && leaf[2] != '\0') return true;
+  for (const char* name : OS_JUNK_NAMES) {
+    if (strcmp(leaf, name) == 0) return true;
+  }
+  return false;
+}
+
 // A plugin-supplied path (web request or device.json): absolute, no parent
 // refs, not a credential store.
 inline bool isPluginPath(const std::string& p) {

@@ -1277,8 +1277,9 @@ void CrossPointWebServer::handleDelete() const {
     // Security check: prevent deletion of protected items
     const String itemName = itemPath.substring(itemPath.lastIndexOf('/') + 1);
 
-    // Hidden/system files and credential stores are protected
-    if (itemName.startsWith(".") || protectedpaths::isSensitivePath(itemPath.c_str())) {
+    // Hidden/system files and credential stores are protected; macOS metadata is not.
+    const bool osJunk = protectedpaths::isRemovableOsJunk(itemPath.c_str());
+    if ((itemName.startsWith(".") && !osJunk) || protectedpaths::isSensitivePath(itemPath.c_str())) {
       failedItems += itemPath + " (hidden/system file); ";
       allSuccess = false;
       continue;
@@ -1308,7 +1309,11 @@ void CrossPointWebServer::handleDelete() const {
     // Decide whether it's a directory or file by opening it
     bool success = false;
     HalFile f = Storage.open(itemPath.c_str());
-    if (f && f.isDirectory()) {
+    if (osJunk && f && f.isDirectory()) {
+      // Never empty and not browsable here, so removed with its contents.
+      f.close();
+      success = Storage.removeDir(itemPath.c_str());
+    } else if (f && f.isDirectory()) {
       // For folders, ensure empty before removing
       HalFile entry = f.openNextFile();
       if (entry) {
