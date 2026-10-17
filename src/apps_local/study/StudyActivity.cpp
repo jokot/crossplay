@@ -22,6 +22,7 @@
 #include "../ui/ToyboxFormat.h"
 #include "../ui/ToyboxMetrics.h"
 #include "../ui/ToyboxTheme.h"
+#include "StudyLegacyFiles.h"
 #include "StudyStats.h"
 #include "StudyText.h"
 #include "StudyVerdict.h"
@@ -417,6 +418,7 @@ bool StudyActivity::openDeckAt(const int index) {
   if (index < 0 || index >= deckCount_) return false;
   deckIndex_ = index;
   std::snprintf(deckDir_, sizeof(deckDir_), "%s/%s", kStudyRoot, deckNames_[index]);
+  study::removeLegacyGlyphLists(deckDir_);
 
   char lastPath[64];
   std::snprintf(lastPath, sizeof(lastPath), "%s/.last", kStudyRoot);
