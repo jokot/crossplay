@@ -291,6 +291,13 @@ std::vector<SettingInfo> getBaseSettingsList(size_t extraCapacity = 0);
 inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr,
                                                 const std::vector<DictionaryEntry>* dictionaries = nullptr) {
   auto v = getBaseSettingsList(dictionaries && !dictionaries->empty() ? 1 : 0);
+  // Home-key boards use the Home button actions instead; the Picco has no
+  // usable Confirm key. UI-only: the base list keeps the key for migration.
+  if (BoardConfig::hasHomeKey() || BoardConfig::isPicco()) {
+    v.erase(
+        std::remove_if(v.begin(), v.end(), [](const SettingInfo& s) { return s.nameId == StrId::STR_LONG_PRESS_MENU; }),
+        v.end());
+  }
   // Frontlit and lightless variants of a board share one binary (EEGO A4);
   // presence is the I2C probe result from Frontlight.begin(). UI-only: the probe
   // has not run at load time, so the base list must keep the persisted key.
