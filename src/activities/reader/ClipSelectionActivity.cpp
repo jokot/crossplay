@@ -64,7 +64,7 @@ void ClipSelectionActivity::onEnter() {
     barLabels[barCount++] = label;
   };
   addAction(ClippingResult::Action::Lookup, tr(STR_LOOKUP));
-  if (wikipedia_lookup::available()) addAction(ClippingResult::Action::Wikipedia, tr(STR_WIKIPEDIA));
+  if (wikipedia_lookup::available()) addAction(ClippingResult::Action::Wikipedia, tr(STR_WIKI_BUTTON));
   addAction(ClippingResult::Action::Clip, tr(STR_CLIP));
   addAction(ClippingResult::Action::Bookmark, tr(STR_BOOKMARK_OPTION));
   fontId = SETTINGS.getReaderFontId();
