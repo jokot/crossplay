@@ -109,6 +109,24 @@ std::unique_ptr<Activity> WikipediaActivity::create(GfxRenderer& renderer, Mappe
   return makeUniqueNoThrow<WikipediaActivity>(renderer, mappedInput);
 }
 
+std::unique_ptr<Activity> WikipediaActivity::createForTitle(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                            std::string title) {
+  auto activity = makeUniqueNoThrow<WikipediaActivity>(renderer, mappedInput);
+  if (activity) {
+    activity->pendingTitle_ = std::move(title);
+    activity->returnToCaller_ = true;
+  }
+  return activity;
+}
+
+void WikipediaActivity::leaveApp() {
+  if (returnToCaller_) {
+    finish();
+    return;
+  }
+  shelf::leave(renderer, mappedInput);
+}
+
 WikipediaActivity::~WikipediaActivity() = default;
 
 void WikipediaActivity::onEnter() {
@@ -151,6 +169,14 @@ void WikipediaActivity::onEnter() {
       writeFile(kCacheMarker, marker);
     }
     go(View::Search);
+    if (!pendingTitle_.empty()) {
+      const std::string title = std::move(pendingTitle_);
+      pendingTitle_.clear();
+      openTitle(title);
+    }
+  } else if (returnToCaller_) {
+    // Never the install screen over an open book: it hands the card to USB.
+    showNotice("NOTHING YET", tr(STR_WIKI_NOT_ON_CARD), "BACK", wikiui::ActionBack);
   } else {
     enterInstall();
   }
@@ -507,6 +533,10 @@ void WikipediaActivity::pushHistory() {
 
 void WikipediaActivity::popHistory() {
   if (history_.empty()) {
+    if (returnToCaller_) {
+      leaveApp();
+      return;
+    }
     closeArticle();
     go(View::Search);
     return;
@@ -797,6 +827,8 @@ void WikipediaActivity::routeAction(const int action, const int value) {
     case wikiui::ActionBack:
       if (section_) {
         go(View::Article);
+      } else if (returnToCaller_) {
+        leaveApp();
       } else {
         go(View::Search);
       }
@@ -900,13 +932,18 @@ void WikipediaActivity::loop() {
           keyboardShown_ = false;
           requestUpdate();
         } else {
-          shelf::leave(renderer, mappedInput);
+          leaveApp();
         }
         return;
       case View::Article:
         // The edge swipe leaves the article for the main page; the band's
         // chevron is the one that walks the trail back (Mario, 2026-09-11:
         // "the back gesture and the back arrow do different things").
+        // Opened from the reader, "leave the article" is back to the book.
+        if (returnToCaller_) {
+          leaveApp();
+          return;
+        }
         saveState();
         history_.clear();
         closeArticle();

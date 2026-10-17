@@ -49,6 +49,7 @@
 #include "SilentRestart.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/settings/TextSettingsActivity.h"
+#include "apps_local/wikipedia/WikipediaLookup.h"
 #include "clippings/ClippingText.h"
 #include "clippings/ClippingsManager.h"
 #include "components/UITheme.h"
@@ -451,6 +452,17 @@ void EpubReaderActivity::startClipSelection(const int initialX, const int initia
       showBookmarkMessage = true;
       bookmarkMessageTime = millis();
       requestUpdate();
+      return;
+    }
+    // FORK CHANGE: the selection bar's Wikipedia button (apps_local/wikipedia).
+    if (clipping.action == ClippingResult::Action::Wikipedia) {
+      auto wikipedia = wikipedia_lookup::open(renderer, mappedInput, clipping.text);
+      if (!wikipedia) {
+        LOG_ERR("CLIP", "OOM: Wikipedia activity");
+        requestUpdate();
+        return;
+      }
+      startActivityForResult(std::move(wikipedia), [this](const ActivityResult&) { requestUpdate(); });
       return;
     }
     if (clipping.action == ClippingResult::Action::Lookup) {

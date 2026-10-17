@@ -30,6 +30,9 @@ class WikipediaActivity final : public Activity {
   ~WikipediaActivity() override;
 
   static std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& mappedInput);
+  // Opened from the reader on `title`: every way out returns to the book.
+  static std::unique_ptr<Activity> createForTitle(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                                                  std::string title);
 
   void onEnter() override;
   void onExit() override;
@@ -89,6 +92,8 @@ class WikipediaActivity final : public Activity {
   void turnPage(int delta);
   void pushHistory();
   void popHistory();
+  // Out of the app: to the shelf, or back to the book when opened from it.
+  void leaveApp();
   void refreshHeadingPages();
   int headingForPage(int page) const;
   void renderArticle(toybox::Screen& screen);
@@ -108,6 +113,10 @@ class WikipediaActivity final : public Activity {
   wikipedia::Pack pack_;
   wikipedia::State state_;
   bool packOpen_ = false;
+  // Set by createForTitle(): the article to open on entry, and that the app
+  // sits on top of an open book rather than the shelf.
+  std::string pendingTitle_;
+  bool returnToCaller_ = false;
   std::string footer_;
   std::string partsLine_;
 
