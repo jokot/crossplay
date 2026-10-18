@@ -90,3 +90,22 @@ TEST(OsJunk, ParentsSdFatWouldOpenAsHiddenFoldersDoNotQualify) {
   EXPECT_FALSE(isRemovableOsJunk("/Books/ .crosspoint/.DS_Store"));
   EXPECT_TRUE(isRemovableOsJunk("/My Books/._novel.epub"));  // an inner space is an ordinary folder
 }
+
+TEST(OsJunk, AliasParentsWithTrailingSpacesOrDotsDoNotQualify) {
+  // SdFat drops trailing dots and spaces before it matches an 8.3 alias.
+  EXPECT_FALSE(isRemovableOsJunk("/CROSSP~1 /._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/FONTS~1  /.DS_Store"));
+  EXPECT_FALSE(isRemovableOsJunk("/CROSSP~1 ./._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/a/b/ABCDEF~1 /._x"));
+}
+
+TEST(OsJunk, OnlyMacOsFoldersAreRemovedWithTheirContents) {
+  EXPECT_TRUE(protectedpaths::isOsJunkFolderName(".Spotlight-V100"));
+  EXPECT_TRUE(protectedpaths::isOsJunkFolderName(".Trashes"));
+  EXPECT_TRUE(protectedpaths::isOsJunkFolderName(".fseventsd"));
+  EXPECT_TRUE(protectedpaths::isOsJunkFolderName(".TemporaryItems"));
+  // macOS writes these only as files; a folder with such a name is the user's.
+  EXPECT_FALSE(protectedpaths::isOsJunkFolderName(".DS_Store"));
+  EXPECT_FALSE(protectedpaths::isOsJunkFolderName("._backup"));
+  EXPECT_FALSE(protectedpaths::isOsJunkFolderName(".crosspoint"));
+}

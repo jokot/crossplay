@@ -210,6 +210,17 @@ Form parameters:
 Protected items cannot be deleted. Non-empty folders are rejected. EPUB cache
 data for deleted files is cleared.
 
+Exception for macOS metadata. These items can be deleted even though their names
+start with a dot:
+
+- the folders `.Spotlight-V100`, `.Trashes`, `.fseventsd` and `.TemporaryItems`,
+  with everything inside them. Content more than 8 folder levels deep, or a name
+  longer than 255 bytes, makes the delete fail, and part of the folder may remain.
+- `.DS_Store` files and AppleDouble `._name` files.
+
+The exception does not apply inside hidden folders. For example,
+`/.crosspoint/.DS_Store` is still refused.
+
 ## Settings API
 
 ### `GET /api/settings`

@@ -142,6 +142,28 @@ bool isProtectedItemName(const String& name) {
   return false;
 }
 
+// Removes a macOS metadata folder and its contents. Fails, leaving the rest in
+// place, past MAX_DEPTH levels (so card data cannot drive the recursion past the
+// loop task's stack) or on a name that does not fit the name buffer.
+bool removeOsJunkFolder(const String& path, const int depth = 0) {
+  constexpr int MAX_DEPTH = 8;
+  if (depth > MAX_DEPTH) return false;
+  HalFile dir = Storage.open(path.c_str());
+  if (!dir || !dir.isDirectory()) return false;
+  char name[256];
+  for (HalFile entry = dir.openNextFile(); entry; entry = dir.openNextFile()) {
+    const bool isDir = entry.isDirectory();
+    const size_t nameLen = entry.getName(name, sizeof(name));
+    entry.close();
+    if (nameLen == 0) return false;
+    const String child = path + "/" + name;
+    if (child.isEmpty()) return false;  // allocation failed
+    if (!(isDir ? removeOsJunkFolder(child, depth + 1) : Storage.remove(child.c_str()))) return false;
+  }
+  dir.close();
+  return Storage.rmdir(path.c_str());
+}
+
 }  // namespace
 
 // File listing page template - now using generated headers:
@@ -1309,10 +1331,9 @@ void CrossPointWebServer::handleDelete() const {
     // Decide whether it's a directory or file by opening it
     bool success = false;
     HalFile f = Storage.open(itemPath.c_str());
-    if (osJunk && f && f.isDirectory()) {
-      // Never empty and not browsable here, so removed with its contents.
+    if (osJunk && protectedpaths::isOsJunkFolderName(itemName.c_str()) && f && f.isDirectory()) {
       f.close();
-      success = Storage.removeDir(itemPath.c_str());
+      success = removeOsJunkFolder(itemPath);
     } else if (f && f.isDirectory()) {
       // For folders, ensure empty before removing
       HalFile entry = f.openNextFile();

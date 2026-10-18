@@ -9,7 +9,8 @@
 // manifest may read or write: their passwords are obfuscated with a device
 // key, so the files must stay on the device. Mirrors the getFilePath() of
 // WifiCredentialStore, OpdsServerStore and KOReaderCredentialStore. Prefix
-// match, so the stores' temp/backup siblings are covered too.
+// match, so the stores' temp/backup siblings are covered too. Also decides
+// which macOS metadata the file manager may delete despite its leading dot.
 namespace protectedpaths {
 
 inline constexpr const char* SENSITIVE_FILES[] = {"/.crosspoint/wifi.json", "/.crosspoint/opds.json",
@@ -24,6 +25,13 @@ inline bool isShortAlias(const char* first, const char* last) {
   const size_t base = static_cast<size_t>((dot ? dot : last) - first);
   const size_t ext = dot ? static_cast<size_t>(last - dot - 1) : 0;
   return base <= 8 && ext <= 3;
+}
+
+// SdFat skips leading spaces and drops trailing dots and spaces when it opens a
+// name. Narrows [first, last) to the name it would actually open.
+inline void trimToSdFatName(const char*& first, const char*& last) {
+  while (first < last && *first == ' ') first++;
+  while (last > first && (last[-1] == '.' || last[-1] == ' ')) last--;
 }
 
 inline bool isSensitivePath(const char* path) {
@@ -41,12 +49,9 @@ inline bool isSensitivePath(const char* path) {
       canon.erase(slash == std::string::npos ? 0 : slash);
       if (depth > 0) depth--;
     } else {
-      // SdFat skips leading spaces and drops trailing dots and spaces when it
-      // opens a name, so compare the name it would actually open.
       const char* first = seg;
       const char* last = seg + len;
-      while (first < last && *first == ' ') first++;
-      while (last > first && (last[-1] == '.' || last[-1] == ' ')) last--;
+      trimToSdFatName(first, last);
       // The stores sit two levels deep; an alias further down cannot reach one.
       if (depth < 2 && isShortAlias(first, last)) return true;
       if (first < last) {
@@ -64,26 +69,37 @@ inline bool isSensitivePath(const char* path) {
   return false;
 }
 
-// Metadata macOS writes onto any card it mounts, in the exact spellings it uses.
-inline constexpr const char* OS_JUNK_NAMES[] = {".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems",
-                                                ".DS_Store"};
+// Metadata macOS writes onto a card, in the exact spellings it uses. Only the
+// folders are ever deleted with their contents; the files are plain deletes.
+inline constexpr const char* OS_JUNK_FOLDERS[] = {".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems"};
+inline constexpr const char* OS_JUNK_FILES[] = {".DS_Store"};
 
-// The last segment is OS_JUNK_NAMES or an AppleDouble "._name", and no earlier
-// segment opens as a hidden folder: dot-prefixed once SdFat skips leading spaces,
-// or an 8.3 alias. So nothing inside the firmware's hidden folders qualifies.
+inline bool isOsJunkFolderName(const char* name) {
+  for (const char* folder : OS_JUNK_FOLDERS) {
+    if (strcmp(name, folder) == 0) return true;
+  }
+  return false;
+}
+
+// True if the last segment is OS junk (one of the names above or an AppleDouble
+// "._name") and no parent folder is hidden. A parent counts as hidden if the name
+// SdFat opens starts with '.' or is an 8.3 alias. So the exception never applies
+// inside .crosspoint, .fonts or other hidden folders.
 inline bool isRemovableOsJunk(const char* path) {
-  const char* last = strrchr(path, '/');
-  const char* leaf = last ? last + 1 : path;
+  const char* slash = strrchr(path, '/');
+  const char* leaf = slash ? slash + 1 : path;
   for (const char* seg = path; seg < leaf;) {
     const char* end = static_cast<const char*>(memchr(seg, '/', static_cast<size_t>(leaf - seg)));
     if (end == nullptr) end = leaf;
     const char* first = seg;
-    while (first < end && *first == ' ') first++;
-    if (first < end && (*first == '.' || isShortAlias(first, end))) return false;
+    const char* last = end;
+    trimToSdFatName(first, last);
+    if (first < last && (*first == '.' || isShortAlias(first, last))) return false;
     seg = end + 1;
   }
   if (leaf[0] == '.' && leaf[1] == '_' && leaf[2] != '\0') return true;
-  for (const char* name : OS_JUNK_NAMES) {
+  if (isOsJunkFolderName(leaf)) return true;
+  for (const char* name : OS_JUNK_FILES) {
     if (strcmp(leaf, name) == 0) return true;
   }
   return false;
