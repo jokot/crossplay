@@ -78,3 +78,15 @@ TEST(OsJunk, RealDataIsNotJunk) {
   EXPECT_FALSE(isRemovableOsJunk(""));
   EXPECT_FALSE(isRemovableOsJunk("/.spotlight-v100"));  // macOS writes one exact spelling
 }
+
+TEST(OsJunk, ParentsSdFatWouldOpenAsHiddenFoldersDoNotQualify) {
+  // SdFat skips leading spaces, drops trailing dots and spaces, and opens 8.3
+  // aliases, so each of these reaches a file inside .crosspoint or .fonts.
+  EXPECT_FALSE(isRemovableOsJunk("/ .crosspoint/._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/  .fonts/.DS_Store"));
+  EXPECT_FALSE(isRemovableOsJunk("/.crosspoint./._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/.crosspoint /._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/CROSSP~1/._x"));
+  EXPECT_FALSE(isRemovableOsJunk("/Books/ .crosspoint/.DS_Store"));
+  EXPECT_TRUE(isRemovableOsJunk("/My Books/._novel.epub"));  // an inner space is an ordinary folder
+}

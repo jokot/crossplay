@@ -69,12 +69,18 @@ inline constexpr const char* OS_JUNK_NAMES[] = {".Spotlight-V100", ".Trashes", "
                                                 ".DS_Store"};
 
 // The last segment is OS_JUNK_NAMES or an AppleDouble "._name", and no earlier
-// segment is dot-prefixed, so nothing inside the firmware's hidden folders qualifies.
+// segment opens as a hidden folder: dot-prefixed once SdFat skips leading spaces,
+// or an 8.3 alias. So nothing inside the firmware's hidden folders qualifies.
 inline bool isRemovableOsJunk(const char* path) {
   const char* last = strrchr(path, '/');
   const char* leaf = last ? last + 1 : path;
-  for (const char* seg = path; seg < leaf; seg++) {
-    if (*seg == '.' && (seg == path || seg[-1] == '/')) return false;
+  for (const char* seg = path; seg < leaf;) {
+    const char* end = static_cast<const char*>(memchr(seg, '/', static_cast<size_t>(leaf - seg)));
+    if (end == nullptr) end = leaf;
+    const char* first = seg;
+    while (first < end && *first == ' ') first++;
+    if (first < end && (*first == '.' || isShortAlias(first, end))) return false;
+    seg = end + 1;
   }
   if (leaf[0] == '.' && leaf[1] == '_' && leaf[2] != '\0') return true;
   for (const char* name : OS_JUNK_NAMES) {
