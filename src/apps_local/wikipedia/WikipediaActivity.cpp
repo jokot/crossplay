@@ -111,7 +111,7 @@ std::unique_ptr<Activity> WikipediaActivity::create(GfxRenderer& renderer, Mappe
 
 std::unique_ptr<Activity> WikipediaActivity::createForTitle(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                                             std::string title) {
-  auto activity = makeUniqueNoThrow<WikipediaActivity>(renderer, mappedInput);
+  auto activity = makeUniqueNoThrow<WikipediaActivity>(renderer, mappedInput, "WikipediaFromBook");
   if (activity) {
     activity->pendingTitle_ = std::move(title);
     activity->returnToCaller_ = true;
@@ -125,7 +125,7 @@ std::unique_ptr<Activity> WikipediaActivity::createForTitle(GfxRenderer& rendere
 // is told Wikipedia is open, and the reboot lands on its install screen with
 // nothing beneath it -- and with a fresh heap for the copy.
 void WikipediaActivity::getFromReader() {
-  if (!shelf::reopenAfterRestart("WIKIPEDIA")) {
+  if (!shelf::reopenAfterRestart(&WikipediaActivity::create)) {
     LOG_ERR(kTag, "no shelf item to restart into");
     return;
   }

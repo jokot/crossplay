@@ -37,6 +37,7 @@ inline Rect actions(const Rect safe, const int textTop, const int height, const 
               height};
 }
 
+// FORK CHANGE: `count` (default upstream's 3) for the Wiki button.
 inline Rect button(const Rect actions, const int index, const int padding, const int count = 3) {
   const int width = (actions.width - padding * (count + 1)) / count;
   return Rect{actions.x + padding + index * (width + padding), actions.y + padding, width,

@@ -289,7 +289,8 @@ class BaseTheme {
                               const std::function<UIIcon(int index)>& rowIcon, int rowSpacing = -1,
                               int rowHeight = -1) const;
   static void drawSelectionHandle(const GfxRenderer& renderer, Rect rect, bool left);
-  // `labels`/`count` default to Look Up, Clip, Bookmark.
+  // `labels`/`count` default to Look Up, Clip, Bookmark. FORK CHANGE: the
+  // reader's selection bar passes four (Wiki, apps_local/wikipedia).
   static void drawSelectionActions(const GfxRenderer& renderer, Rect rect, const char* const* labels = nullptr,
                                    int count = 3);
   virtual Rect drawPopup(const GfxRenderer& renderer, const char* message) const;

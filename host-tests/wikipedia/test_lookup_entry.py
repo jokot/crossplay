@@ -53,6 +53,7 @@ def body_of(source, signature):
 lookup = (WIKI / "WikipediaLookup.cpp").read_text(encoding="utf-8") if (WIKI / "WikipediaLookup.cpp").exists() else ""
 activity = (WIKI / "WikipediaActivity.cpp").read_text(encoding="utf-8")
 clip = CLIP.read_text(encoding="utf-8")
+reader = (CLIP.parent / "EpubReaderActivity.cpp").read_text(encoding="utf-8")
 
 # 1. Always offered, through wikipedia_lookup.
 check("createForTitle(" in body_of(lookup, "std::unique_ptr<Activity> open("),
@@ -84,6 +85,25 @@ install = activity[activity.find("case wikiui::ActionInstall:"):]
 install = install[: install.find("return;", install.find("enterInstall();")) + 7]
 check(install.find("getFromReader()") >= 0 and install.find("returnToCaller_") < install.find("enterInstall()"),
       "the install action must restart from the reader before it can reach enterInstall()")
+
+# 4. The window opened from a book is not the shelf's Wikipedia. The shelf
+#    decides what to resume on wake by the activity name; with the same name,
+#    a sleep over the article woke into Wikipedia with no book under it.
+create_for = body_of(activity, "std::unique_ptr<Activity> WikipediaActivity::createForTitle(")
+name = re.search(r'makeUniqueNoThrow<WikipediaActivity>\(renderer, mappedInput, "([^"]+)"\)', create_for)
+check(name is not None and name.group(1) != "Wikipedia",
+      "createForTitle() must give its window an activity name other than the shelf's \"Wikipedia\"")
+
+# 5. GET WIKIPEDIA finds the shelf item by its factory, not by a typed title.
+check("reopenAfterRestart(&WikipediaActivity::create)" in get,
+      "getFromReader() must name the shelf item by WikipediaActivity::create")
+
+# 6. Back in the book, the shared hyphenator is the book's language again: an
+#    article sets it to English, and the book's build may still be running.
+branch = reader[reader.find("ClippingResult::Action::Wikipedia"):]
+branch = branch[: branch.find("ClippingResult::Action::Lookup")]
+check("Hyphenator::setPreferredLanguage(epub->getLanguage())" in branch,
+      "the reader must restore the book's hyphenation language when Wikipedia returns")
 
 for b in bad:
     print(f"FAIL lookup-entry  {b}")

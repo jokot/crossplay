@@ -2,6 +2,7 @@
 
 #include <Epub/Page.h>
 #include <Epub/blocks/TextBlock.h>
+#include <Epub/hyphenation/Hyphenator.h>
 #include <FontCacheManager.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
@@ -462,7 +463,12 @@ void EpubReaderActivity::startClipSelection(const int initialX, const int initia
         requestUpdate();
         return;
       }
-      startActivityForResult(std::move(wikipedia), [this](const ActivityResult&) { requestUpdate(); });
+      startActivityForResult(std::move(wikipedia), [this](const ActivityResult&) {
+        // An article sets the shared hyphenator to English (Section::startBuild);
+        // the book's own build may still be running and writes its cache.
+        if (epub) Hyphenator::setPreferredLanguage(epub->getLanguage());
+        requestUpdate();
+      });
       return;
     }
     if (clipping.action == ClippingResult::Action::Lookup) {

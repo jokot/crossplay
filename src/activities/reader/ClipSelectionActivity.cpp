@@ -57,6 +57,7 @@ ClipSelectionActivity::ClipSelectionActivity(GfxRenderer& renderer, MappedInputM
 
 void ClipSelectionActivity::onEnter() {
   Activity::onEnter();
+  // FORK CHANGE: the bar is built here so Wiki can sit between Look Up and Clip.
   barCount = 0;
   const auto addAction = [this](const ClippingResult::Action action, const char* label) {
     barActions[barCount] = action;

@@ -25,8 +25,11 @@
 
 class WikipediaActivity final : public Activity {
  public:
-  WikipediaActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-      : Activity("Wikipedia", renderer, mappedInput) {}
+  // `name` differs only for the window opened from a book (createForTitle):
+  // the shelf decides what to resume on wake by the activity name, and that
+  // window is not the shelf's Wikipedia.
+  WikipediaActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const char* name = "Wikipedia")
+      : Activity(name, renderer, mappedInput) {}
   ~WikipediaActivity() override;
 
   static std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& mappedInput);
